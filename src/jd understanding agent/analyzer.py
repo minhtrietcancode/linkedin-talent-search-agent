@@ -2,34 +2,12 @@ import json
 import re
 from typing import Dict, List, Union, Any
 from pathlib import Path
-import PyPDF2
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
-from pydantic import BaseModel, Field, field_validator
-
-
-class JDAnalysisResult(BaseModel):
-    """Pydantic model for structured JD analysis output"""
-    title: str = Field(description="Job title extracted from the job description")
-    minimum_degree: str = Field(
-        description="Minimum degree requirement",
-        pattern="^(None|Diploma|Bachelor|Master|PhD)$"
-    )
-    location: str = Field(description="Job location")
-    skills: List[str] = Field(description="List of required skills/technologies")
-    experience: int = Field(description="Minimum years of experience required", ge=0)
-    search_keywords: List[str] = Field(description="Keywords for searching candidates")
-    workright_requirement: str = Field(description="Work authorization requirements")
-    
-    @field_validator('minimum_degree')
-    @classmethod
-    def validate_degree(cls, v):
-        valid_degrees = ["None", "Diploma", "Bachelor", "Master", "PhD"]
-        if v not in valid_degrees:
-            return "None"
-        return v
+from models import JDAnalysisResult
+from utils import extract_text_from_pdf, preprocess_text
 
 
 class JDAnalyzer:
@@ -88,48 +66,6 @@ Return only the JSON object with the extracted information.
             partial_variables={"format_instructions": self.output_parser.get_format_instructions()}
         )
     
-    def extract_text_from_pdf(self, pdf_path: Union[str, Path]) -> str:
-        """
-        Extract text content from PDF file
-        
-        Args:
-            pdf_path (Union[str, Path]): Path to PDF file
-            
-        Returns:
-            str: Extracted text content
-        """
-        try:
-            with open(pdf_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                text = ""
-                
-                for page_num in range(len(pdf_reader.pages)):
-                    page = pdf_reader.pages[page_num]
-                    text += page.extract_text() + "\n"
-                
-                return text.strip()
-        except Exception as e:
-            raise Exception(f"Error extracting text from PDF: {str(e)}")
-    
-    def preprocess_text(self, text: str) -> str:
-        """
-        Clean and preprocess job description text
-        
-        Args:
-            text (str): Raw text content
-            
-        Returns:
-            str: Cleaned text
-        """
-        # Remove extra whitespace and normalize
-        text = re.sub(r'\s+', ' ', text)
-        text = re.sub(r'\n+', '\n', text)
-        
-        # Remove common unwanted patterns
-        text = re.sub(r'(Apply now|Submit resume|EOE|Equal Opportunity)', '', text, flags=re.IGNORECASE)
-        
-        return text.strip()
-    
     def analyze_jd(self, job_description: Union[str, Path]) -> Dict[str, Any]:
         """
         Main method to analyze job description
@@ -145,7 +81,7 @@ Return only the JSON object with the extracted information.
         if isinstance(job_description, (str, Path)) and Path(job_description).exists():
             # It's a file path
             if str(job_description).lower().endswith('.pdf'):
-                jd_text = self.extract_text_from_pdf(job_description)
+                jd_text = extract_text_from_pdf(job_description)
             else:
                 # Assume it's a text file
                 with open(job_description, 'r', encoding='utf-8') as file:
@@ -155,7 +91,7 @@ Return only the JSON object with the extracted information.
             jd_text = str(job_description)
         
         # Preprocess the text
-        jd_text = self.preprocess_text(jd_text)
+        jd_text = preprocess_text(jd_text)
         
         if not jd_text:
             raise ValueError("No text content found in job description")
@@ -278,33 +214,3 @@ Return only the JSON object with the extracted information.
                 print(f"Error analyzing JD: {str(e)}")
                 results.append(None)
         return results
-
-
-# Example usage
-if __name__ == "__main__":
-    # Initialize analyzer
-    analyzer = JDAnalyzer(openai_api_key="your-openai-api-key")
-    
-    # Example job description
-    sample_jd = """
-    Senior Backend Developer - Remote
-    
-    We are seeking a skilled Senior Backend Developer to join our team. 
-    
-    Requirements:
-    - Bachelor's degree in Computer Science or related field
-    - 5+ years of experience in backend development
-    - Strong proficiency in Python and Django framework
-    - Experience with RESTful APIs and microservices
-    - Knowledge of SQL databases (PostgreSQL preferred)
-    - Experience with AWS cloud services
-    - Docker and Kubernetes experience preferred
-    - Strong problem-solving skills and ability to work independently
-    
-    Location: Remote (US candidates only)
-    Must be authorized to work in the US without sponsorship.
-    """
-    
-    # Analyze the job description
-    result = analyzer.analyze_jd(sample_jd)
-    print(json.dumps(result, indent=2))
