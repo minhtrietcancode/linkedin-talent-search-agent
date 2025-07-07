@@ -5,9 +5,12 @@ from langchain.prompts import (
     HumanMessagePromptTemplate,
     ChatPromptTemplate
 )
+from dotenv import load_dotenv
+
+load_dotenv('config.env')
 
 # Load OpenAI API key
-os.environ["OPENAI_API_KEY"] = "your_openai_api_key"
+os.getenv("OPENAI_API_KEY")
 
 SYSTEM_PROMPT = """
 You are a data parser. Given raw LinkedIn data, output a Python dict with keys:

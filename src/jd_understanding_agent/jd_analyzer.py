@@ -1,5 +1,5 @@
-import json
 import re
+import os
 from typing import Dict, List, Union, Any
 from pathlib import Path
 from langchain_openai import ChatOpenAI
@@ -16,16 +16,15 @@ class JDAnalyzer:
     Processes job descriptions (string or PDF) and extracts structured information
     """
     
-    def __init__(self, openai_api_key: str, model_name: str = "gpt-3.5-turbo"):
+    def __init__(self, model_name: str = "gpt-3.5-turbo"):
         """
         Initialize the JD Analyzer
         
         Args:
-            openai_api_key (str): OpenAI API key
             model_name (str): LLM model to use (default: gpt-3.5-turbo)
         """
         self.llm = ChatOpenAI(
-            openai_api_key=openai_api_key,
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
             model_name=model_name,
             temperature=0.1  # Low temperature for consistent extraction
         )
