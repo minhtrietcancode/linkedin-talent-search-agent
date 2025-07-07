@@ -1,1 +1,8 @@
-python-dotenv 
+langchain-openai
+pydantic
+PyPDF2
+python-dotenv
+selenium
+webdriver-manager
+beautifulsoup4
+googlesearch-python 
