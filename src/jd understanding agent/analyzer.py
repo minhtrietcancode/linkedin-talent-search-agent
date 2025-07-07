@@ -1,7 +1,5 @@
-# linkedin_searcher.py
-
 from typing import Dict, List, Any, Set
-from googlesearch import search  # pip install googlesearch-python
+from googlesearch import search  
 
 def google_search(query: str, num_results: int) -> List[str]:
     """
@@ -12,7 +10,7 @@ def google_search(query: str, num_results: int) -> List[str]:
 
 def search_linkedin_profiles(
     attributes: Dict[str, Any],
-    max_profiles: int = 20
+    max_profiles: int = 30
 ) -> List[str]:
     """
     Search LinkedIn profiles based on job attributes.
